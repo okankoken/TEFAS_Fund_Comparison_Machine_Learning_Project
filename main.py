@@ -5,6 +5,8 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('display.float_format', lambda x: '%.5f' % x)
 
+
+#Dataset has been created between 16.09.2019 - 16.09.2024 dates
 df = pd.read_excel("Takasbank TEFAS  Fon Karşılaştırma.xlsx" , sheet_name="Excel")
 
 df
