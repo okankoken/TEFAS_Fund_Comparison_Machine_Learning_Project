@@ -7,13 +7,14 @@ pd.set_option('display.float_format', lambda x: '%.5f' % x)
 
 
 #Dataset has been created between 16.09.2019 - 16.09.2024 dates
-df = pd.read_excel("Takasbank TEFAS  Fon Karşılaştırma.xlsx" , sheet_name="Excel")
+df = pd.read_excel("datasets/TEFAS_Fund_Comparison.xlsx" , sheet_name="Meta_Data")
 
 df
 df.head(10)
 df.info
 df.shape
 df.dtypes
+df.columns
 df.describe().T
 def check_df(dataframe, head=20):
     print("##################### Shape #####################")
@@ -33,8 +34,6 @@ def check_df(dataframe, head=20):
 
 check_df(df)
 
-fon_type_counts = df.groupby('Şemsiye Fon Türü').agg({'Fon Kodu': 'count'})
+fon_türü_counts = df.groupby('Fon Türü').agg({'Fon Kodu': 'count'})
 
-fon_type_counts.shape
-
-fon_type_counts.sort_values(by='Fon Kodu', ascending=False)
+fon_türü_counts.sort_values(by='Fon Kodu', ascending=False)
