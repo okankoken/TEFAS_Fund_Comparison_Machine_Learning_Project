@@ -1,13 +1,21 @@
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from IPython.display import display
 
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('display.float_format', lambda x: '%.5f' % x)
+from tabulate import tabulate
 
 
 #Dataset has been created between 16.09.2019 - 16.09.2024 dates
-df = pd.read_excel("datasets/TEFAS_Fund_Comparison.xlsx" , sheet_name="Meta_Data")
+df = pd.read_excel(r"datasets/TEFAS_Fund_Comparison.xlsx" , sheet_name="Meta_Data")
+print(tabulate(df.head(), headers='keys', tablefmt='psql'))
+
+styled_df = df.style.highlight_max(axis=0)
+print(styled_df)
 
 df
 df.head(10)
