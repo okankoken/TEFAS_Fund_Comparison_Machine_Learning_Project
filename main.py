@@ -10,6 +10,11 @@ from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.impute import SimpleImputer
+from sklearn.linear_model import Lasso, Ridge, ElasticNet
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.pipeline import Pipeline
 
 
 pd.set_option('display.max_columns', None)
@@ -276,21 +281,7 @@ featured_columns = [
     "Kisa_Vadeli_Trend", "Uzun_Vadeli_Trend", "YATIRIMCI YOĞUNLUĞU"
 ]
 
-
 # featured_column kolonlarını taşıma
-
-# # Mevcut tüm sütunları liste olarak al
-# all_columns = df.columns.tolist()
-#
-# # "BANKA BONOSU" sütununun konumunu bul
-# bank_bonosu_index = all_columns.index("BANKA BONOSU")
-#
-# # Yeni sütun sırasını oluştur
-# new_column_order = all_columns[:bank_bonosu_index] + featured_columns + all_columns[bank_bonosu_index:]
-#
-# # Veri setini yeni sütun sırasına göre yeniden düzenle
-# df1 = df[new_column_order]
-
 
 #############################
 
@@ -345,71 +336,340 @@ df1.to_excel("Fon_Veri_Rev1.xlsx", index=False)
 # Bir zaman serisi tahmin modeli veya regresyon modelini kullanarak belirli bir fonun 1 aylık veya 1 yıllık getirisini tahmin edilerek yatırım yapılabilir.
 
 
+##########################################################
+#########################################################
 #5	Model Kurma Ve Parametre Optimizasyonu
 
-# Yatırım çeşitleri sütunlarını tanımla (bağımsız değişkenler)
-Yatirim_Paylari_Columns = [
-    "BANKA BONOSU", "BYF KATILMA PAYI", "DEVLET TAHVİLİ", "DİĞER", "DÖVİZ KAMU İÇ BORÇLANMA ARACI",
-    "DÖVİZ ÖDEMELİ BONO", "DÖVİZ ÖDEMELİ TAHVİL", "EUROBONDS", "FİNANSMAN BONOSU", "FON KATILMA BELGESİ",
-    "GAYRİMENKUL SERTİFİKASI", "GAYRİMENKUL YATIRIM FON KATILMA PAYI", "GİRİŞİM YATIRIM FON KATILMA PAYI",
-    "HAZİNE BONOSU", "HİSSE SENEDİ", "KAMU DIŞ BORÇLANMA ARACI", "KAMU KİRA SERTİFİKASI",
-    "KAMU KİRA SERTİFİKASI DÖVİZ", "KAMU KİRA SERTİFİKASI TL", "KAMU YURT DIŞI KİRA SERTİFİKASI",
-    "KATILIM HESABI", "KATILIM HESABI ALTIN", "KATILIM HESABI DÖVİZ", "KATILIM HESABI TL",
-    "KIYMETLİ MADEN", "KIYMETLİ MADEN CİNSİNDEN BYF", "KIYMETLİ MADEN KAMU BORÇLANMA ARACI",
-    "KIYMETLİ MADEN KAMU KİRA SERTİFİKASI", "MEVDUAT ALTIN", "MEVDUAT DÖVİZ", "MEVDUAT TL",
-    "ÖZEL SEKTÖR YURT DIŞI KİRA SERTİFİKASI", "ÖZEL SEKTÖR DIŞ BORÇ ARACI", "ÖZEL SEKTÖR KİRA SERTİFİKASI",
-    "ÖZEL SEKTÖR TAHVİLİ", "REPO", "TAKASBANK PARA PİYASASI", "TERS REPO", "TÜREV ARACI",
-    "VADELİ İŞLEMLER NAKİT TEMİNATI", "VADELİ MEVDUAT", "VARLIĞA DAYALI MENKUL KIYMET",
-    "YABANCI BORÇLANMA ARACI", "YABANCI BORSA YATIRIM FONU", "YABANCI HİSSE SENEDİ",
-    "YABANCI KAMU BORÇLANMA ARACI", "YABANCI MENKUL KIYMET", "YABANCI ÖZEL SEKTÖR BORÇLANMA ARACI",
-    "YATIRIM FONLARI KATILMA PAYI"
+#Lasso Regresyon
+#Bebek Fonlar için Yeni
+
+target_column_bebek = '3AY'
+feature_columns_bebek = [
+    'FİYAT', 'RİSK DEĞERİ', 'FONUN YAŞI', 'PORTFÖY BÜYÜKLÜĞÜ', 'YATIRIMCI SAYISI', 'TEDAVÜLDEKİ PAY ADETİ',
+    'DOLULUK ORANI', 'Gunluk_Haftalik_Fark', '1Ay_3Ay_Fark', 'YATIRIMCI YOĞUNLUĞU',
+    'BANKA BONOSU', 'BYF KATILMA PAYI', 'DEVLET TAHVİLİ', 'DİĞER',
+    'DÖVİZ KAMU İÇ BORÇLANMA ARACI', 'DÖVİZ ÖDEMELİ BONO', 'DÖVİZ ÖDEMELİ TAHVİL', 'EUROBONDS',
+    'FİNANSMAN BONOSU', 'FON KATILMA BELGESİ', 'GAYRİMENKUL SERTİFİKASI', 'GAYRİMENKUL YATIRIM FON KATILMA PAYI',
+    'GİRİŞİM YATIRIM FON KATILMA PAYI', 'HAZİNE BONOSU', 'HİSSE SENEDİ', 'KAMU DIŞ BORÇLANMA ARACI',
+    'KAMU KİRA SERTİFİKASI', 'KAMU KİRA SERTİFİKASI DÖVİZ', 'KAMU KİRA SERTİFİKASI TL',
+    'KAMU YURT DIŞI KİRA SERTİFİKASI', 'KATILIM HESABI', 'KATILIM HESABI ALTIN', 'KATILIM HESABI DÖVİZ',
+    'KATILIM HESABI TL', 'KIYMETLİ MADEN', 'KIYMETLİ MADEN CİNSİNDEN BYF', 'KIYMETLİ MADEN KAMU BORÇLANMA ARACI',
+    'KIYMETLİ MADEN KAMU KİRA SERTİFİKASI', 'MEVDUAT ALTIN', 'MEVDUAT DÖVİZ', 'MEVDUAT TL',
+    'ÖZEL SEKTÖR YURT DIŞI KİRA SERTİFİKASI', 'ÖZEL SEKTÖR DIŞ BORÇ ARACI', 'ÖZEL SEKTÖR KİRA SERTİFİKASI',
+    'ÖZEL SEKTÖR TAHVİLİ', 'REPO', 'TAKASBANK PARA PİYASASI', 'TERS REPO', 'TÜREV ARACI',
+    'VADELİ İŞLEMLER NAKİT TEMİNATI', 'VADELİ MEVDUAT', 'VARLIĞA DAYALI MENKUL KIYMET',
+    'YABANCI BORÇLANMA ARACI', 'YABANCI BORSA YATIRIM FONU', 'YABANCI HİSSE SENEDİ',
+    'YABANCI KAMU BORÇLANMA ARACI', 'YABANCI MENKUL KIYMET', 'YABANCI ÖZEL SEKTÖR BORÇLANMA ARACI',
+    'YATIRIM FONLARI KATILMA PAYI', 'Yatirim_Paylari_Dolu_Sayisi'
 ]
 
+# "Bebek Fonlar" için veri setini filtreleyip gerekli sütunları seçme
+bebek_fonlar_data = df1[df1['Fon_Yasi_Featured'] == 'Bebek Fonlar'][[target_column_bebek] + feature_columns_bebek]
+bebek_fonlar_data = bebek_fonlar_data.dropna()  # Eksik değerleri çıkarma
 
-# Model eğitim ve değerlendirme fonksiyonu
-def train_model(data, target_column):
-    if data.empty:
-        print(f"Uyarı: {target_column} için yeterli veri bulunamadı. Model eğitimi yapılmadı.")
-        return None, None, None
+# X ve y olarak bağımlı ve bağımsız değişkenleri ayırma
+X_bebek = bebek_fonlar_data[feature_columns_bebek]
+y_bebek = bebek_fonlar_data[target_column_bebek]
 
-    # Bağımsız ve bağımlı değişkenleri ayırma
-    X = data[Yatirim_Paylari_Columns]
-    y = data[target_column]
+# Eğitim ve test veri setlerine ayırma
+X_train_bebek, X_test_bebek, y_train_bebek, y_test_bebek = train_test_split(X_bebek, y_bebek, test_size=0.2, random_state=42)
 
-    # Eğitim ve test kümelerini ayırma
+# Özellik ölçeklendirme
+scaler = StandardScaler()
+X_train_bebek = scaler.fit_transform(X_train_bebek)
+X_test_bebek = scaler.transform(X_test_bebek)
+
+# Lasso model için en iyi alpha değerini belirlemek için GridSearchCV kullanma
+lasso = Lasso(random_state=42)
+param_grid = {'alpha': np.logspace(-4, 0, 50)}
+grid_search = GridSearchCV(lasso, param_grid, scoring='neg_mean_squared_error', cv=5)
+grid_search.fit(X_train_bebek, y_train_bebek)
+
+# En iyi model ve en iyi alpha değeri
+best_lasso = grid_search.best_estimator_
+print("Best alpha:", grid_search.best_params_['alpha'])
+
+# Test seti ile tahmin yapma
+y_pred_bebek = best_lasso.predict(X_test_bebek)
+
+# Başarı metriklerini hesaplama
+mse_bebek = mean_squared_error(y_test_bebek, y_pred_bebek)
+rmse_bebek = np.sqrt(mse_bebek)
+mae_bebek = mean_absolute_error(y_test_bebek, y_pred_bebek)
+r2_bebek = r2_score(y_test_bebek, y_pred_bebek)
+
+# Sonuçları yazdırma
+print("Lasso Regression Model Performance for Bebek Fonlar:")
+print("Mean Squared Error (MSE):", mse_bebek)
+print("Root Mean Squared Error (RMSE):", rmse_bebek)
+print("Mean Absolute Error (MAE):", mae_bebek)
+print("R-squared (R²):", r2_bebek)
+
+# Özellik ağırlıklarını gösterme
+feature_weights_bebek = pd.DataFrame({
+    'Feature': feature_columns_bebek,
+    'Weight': best_lasso.coef_
+}).sort_values(by='Weight', ascending=False)
+
+print("\nFeature Weights:")
+print(feature_weights_bebek)
+
+# Örnek ağırlık verilerini içeriyorsa bunu tanımlayın. (Önceden tanımlanmışsa gerek yok)
+feature_weights_bebek = pd.DataFrame({
+    'Feature': feature_columns_bebek,
+    'Weight': best_lasso.coef_
+}).sort_values(by='Weight', ascending=False)
+
+# Ağırlıkları çubuk grafik olarak gösterme
+plt.figure(figsize=(12, 8))
+plt.barh(feature_weights_bebek['Feature'], feature_weights_bebek['Weight'], color='skyblue')
+plt.xlabel('Weight')
+plt.title('Feature Weights from Optimized Lasso Regression Model for Bebek Fonlar')
+plt.gca().invert_yaxis()  # En yüksek ağırlıkların en üstte görünmesi için y eksenini ters çevirme
+plt.tight_layout()
+plt.show()
+
+
+####################
+# Genç Fonlar İçin Yeni
+target_column_genc = '1YIL'
+feature_columns_genc = [
+    'FİYAT', 'RİSK DEĞERİ', 'FONUN YAŞI', 'PORTFÖY BÜYÜKLÜĞÜ', 'YATIRIMCI SAYISI', 'TEDAVÜLDEKİ PAY ADETİ',
+    'DOLULUK ORANI', 'Gunluk_Haftalik_Fark', '1Ay_3Ay_Fark', 'YATIRIMCI YOĞUNLUĞU',
+    'BANKA BONOSU', 'BYF KATILMA PAYI', 'DEVLET TAHVİLİ', 'DİĞER',
+    'DÖVİZ KAMU İÇ BORÇLANMA ARACI', 'DÖVİZ ÖDEMELİ BONO', 'DÖVİZ ÖDEMELİ TAHVİL', 'EUROBONDS',
+    'FİNANSMAN BONOSU', 'FON KATILMA BELGESİ', 'GAYRİMENKUL SERTİFİKASI', 'GAYRİMENKUL YATIRIM FON KATILMA PAYI',
+    'GİRİŞİM YATIRIM FON KATILMA PAYI', 'HAZİNE BONOSU', 'HİSSE SENEDİ', 'KAMU DIŞ BORÇLANMA ARACI',
+    'KAMU KİRA SERTİFİKASI', 'KAMU KİRA SERTİFİKASI DÖVİZ', 'KAMU KİRA SERTİFİKASI TL',
+    'KAMU YURT DIŞI KİRA SERTİFİKASI', 'KATILIM HESABI', 'KATILIM HESABI ALTIN', 'KATILIM HESABI DÖVİZ',
+    'KATILIM HESABI TL', 'KIYMETLİ MADEN', 'KIYMETLİ MADEN CİNSİNDEN BYF', 'KIYMETLİ MADEN KAMU BORÇLANMA ARACI',
+    'KIYMETLİ MADEN KAMU KİRA SERTİFİKASI', 'MEVDUAT ALTIN', 'MEVDUAT DÖVİZ', 'MEVDUAT TL',
+    'ÖZEL SEKTÖR YURT DIŞI KİRA SERTİFİKASI', 'ÖZEL SEKTÖR DIŞ BORÇ ARACI', 'ÖZEL SEKTÖR KİRA SERTİFİKASI',
+    'ÖZEL SEKTÖR TAHVİLİ', 'REPO', 'TAKASBANK PARA PİYASASI', 'TERS REPO', 'TÜREV ARACI',
+    'VADELİ İŞLEMLER NAKİT TEMİNATI', 'VADELİ MEVDUAT', 'VARLIĞA DAYALI MENKUL KIYMET',
+    'YABANCI BORÇLANMA ARACI', 'YABANCI BORSA YATIRIM FONU', 'YABANCI HİSSE SENEDİ',
+    'YABANCI KAMU BORÇLANMA ARACI', 'YABANCI MENKUL KIYMET', 'YABANCI ÖZEL SEKTÖR BORÇLANMA ARACI',
+    'YATIRIM FONLARI KATILMA PAYI', 'Yatirim_Paylari_Dolu_Sayisi'
+]
+
+# Genç Fonlar için veri hazırlığı
+genc_fonlar_data = df1[df1['Fon_Yasi_Featured'] == 'Genç Fonlar'][[target_column_genc] + feature_columns_genc].dropna()
+X_genc = genc_fonlar_data[feature_columns_genc]
+y_genc = genc_fonlar_data[target_column_genc]
+
+# Eğitim ve test setlerine ayırma
+X_train_genc, X_test_genc, y_train_genc, y_test_genc = train_test_split(X_genc, y_genc, test_size=0.2, random_state=42)
+
+# Özellikleri ölçeklendirme
+scaler_genc = StandardScaler()
+X_train_genc = scaler_genc.fit_transform(X_train_genc)
+X_test_genc = scaler_genc.transform(X_test_genc)
+
+# En iyi alpha değeri için GridSearchCV ile Lasso modelini optimize etme
+lasso = Lasso(random_state=42)
+param_grid = {'alpha': np.logspace(-4, 0, 50)}
+grid_search_genc = GridSearchCV(lasso, param_grid, scoring='neg_mean_squared_error', cv=5)
+grid_search_genc.fit(X_train_genc, y_train_genc)
+
+# En iyi model ve alpha değeri
+best_lasso_genc = grid_search_genc.best_estimator_
+
+# Test seti ile tahmin yapma
+y_pred_genc = best_lasso_genc.predict(X_test_genc)
+
+# Başarı metriklerini hesaplama
+mse_genc = mean_squared_error(y_test_genc, y_pred_genc)
+rmse_genc = np.sqrt(mse_genc)
+mae_genc = mean_absolute_error(y_test_genc, y_pred_genc)
+r2_genc = r2_score(y_test_genc, y_pred_genc)
+
+# Sonuçları yazdırma
+print("Lasso Regression Model Performance for Genç Fonlar:")
+print("Mean Squared Error (MSE):", mse_genc)
+print("Root Mean Squared Error (RMSE):", rmse_genc)
+print("Mean Absolute Error (MAE):", mae_genc)
+print("R-squared (R²):", r2_genc)
+
+# Ağırlıkları görselleştirme
+feature_weights_genc = pd.DataFrame({
+    'Feature': feature_columns_genc,
+    'Weight': best_lasso_genc.coef_
+}).sort_values(by='Weight', ascending=False)
+
+plt.figure(figsize=(12, 8))
+plt.barh(feature_weights_genc['Feature'], feature_weights_genc['Weight'], color='skyblue')
+plt.xlabel('Weight')
+plt.title('Feature Weights from Optimized Lasso Regression Model for Genç Fonlar')
+plt.gca().invert_yaxis()
+plt.tight_layout()
+plt.show()
+
+
+#Yetiskin Fonlar için Yeni
+
+target_column_yetiskin = '5YIL'
+feature_columns_yetiskin = [
+    'FİYAT', 'RİSK DEĞERİ', 'FONUN YAŞI', 'PORTFÖY BÜYÜKLÜĞÜ', 'YATIRIMCI SAYISI', 'TEDAVÜLDEKİ PAY ADETİ',
+    'DOLULUK ORANI', 'Gunluk_Haftalik_Fark', '1Ay_3Ay_Fark', 'YATIRIMCI YOĞUNLUĞU',
+    'BANKA BONOSU', 'BYF KATILMA PAYI', 'DEVLET TAHVİLİ', 'DİĞER',
+    'DÖVİZ KAMU İÇ BORÇLANMA ARACI', 'DÖVİZ ÖDEMELİ BONO', 'DÖVİZ ÖDEMELİ TAHVİL', 'EUROBONDS',
+    'FİNANSMAN BONOSU', 'FON KATILMA BELGESİ', 'GAYRİMENKUL SERTİFİKASI', 'GAYRİMENKUL YATIRIM FON KATILMA PAYI',
+    'GİRİŞİM YATIRIM FON KATILMA PAYI', 'HAZİNE BONOSU', 'HİSSE SENEDİ', 'KAMU DIŞ BORÇLANMA ARACI',
+    'KAMU KİRA SERTİFİKASI', 'KAMU KİRA SERTİFİKASI DÖVİZ', 'KAMU KİRA SERTİFİKASI TL',
+    'KAMU YURT DIŞI KİRA SERTİFİKASI', 'KATILIM HESABI', 'KATILIM HESABI ALTIN', 'KATILIM HESABI DÖVİZ',
+    'KATILIM HESABI TL', 'KIYMETLİ MADEN', 'KIYMETLİ MADEN CİNSİNDEN BYF', 'KIYMETLİ MADEN KAMU BORÇLANMA ARACI',
+    'KIYMETLİ MADEN KAMU KİRA SERTİFİKASI', 'MEVDUAT ALTIN', 'MEVDUAT DÖVİZ', 'MEVDUAT TL',
+    'ÖZEL SEKTÖR YURT DIŞI KİRA SERTİFİKASI', 'ÖZEL SEKTÖR DIŞ BORÇ ARACI', 'ÖZEL SEKTÖR KİRA SERTİFİKASI',
+    'ÖZEL SEKTÖR TAHVİLİ', 'REPO', 'TAKASBANK PARA PİYASASI', 'TERS REPO', 'TÜREV ARACI',
+    'VADELİ İŞLEMLER NAKİT TEMİNATI', 'VADELİ MEVDUAT', 'VARLIĞA DAYALI MENKUL KIYMET',
+    'YABANCI BORÇLANMA ARACI', 'YABANCI BORSA YATIRIM FONU', 'YABANCI HİSSE SENEDİ',
+    'YABANCI KAMU BORÇLANMA ARACI', 'YABANCI MENKUL KIYMET', 'YABANCI ÖZEL SEKTÖR BORÇLANMA ARACI',
+    'YATIRIM FONLARI KATILMA PAYI', 'Yatirim_Paylari_Dolu_Sayisi'
+]
+
+# Yetişkin Fonlar için veri hazırlığı
+yetiskin_fonlar_data = df1[df1['Fon_Yasi_Featured'] == 'Yetişkin Fonlar'][[target_column_yetiskin] + feature_columns_yetiskin].dropna()
+X_yetiskin = yetiskin_fonlar_data[feature_columns_yetiskin]
+y_yetiskin = yetiskin_fonlar_data[target_column_yetiskin]
+
+# Eğitim ve test setlerine ayırma
+X_train_yetiskin, X_test_yetiskin, y_train_yetiskin, y_test_yetiskin = train_test_split(X_yetiskin, y_yetiskin, test_size=0.2, random_state=42)
+
+# Özellikleri ölçeklendirme
+scaler_yetiskin = StandardScaler()
+X_train_yetiskin = scaler_yetiskin.fit_transform(X_train_yetiskin)
+X_test_yetiskin = scaler_yetiskin.transform(X_test_yetiskin)
+
+# En iyi alpha değeri için GridSearchCV ile Lasso modelini optimize etme
+lasso = Lasso(random_state=42)
+param_grid = {'alpha': np.logspace(-4, 0, 50)}
+grid_search_yetiskin = GridSearchCV(lasso, param_grid, scoring='neg_mean_squared_error', cv=5)
+grid_search_yetiskin.fit(X_train_yetiskin, y_train_yetiskin)
+
+# En iyi model ve alpha değeri
+best_lasso_yetiskin = grid_search_yetiskin.best_estimator_
+
+# Test seti ile tahmin yapma
+y_pred_yetiskin = best_lasso_yetiskin.predict(X_test_yetiskin)
+
+# Başarı metriklerini hesaplama
+mse_yetiskin = mean_squared_error(y_test_yetiskin, y_pred_yetiskin)
+rmse_yetiskin = np.sqrt(mse_yetiskin)
+mae_yetiskin = mean_absolute_error(y_test_yetiskin, y_pred_yetiskin)
+r2_yetiskin = r2_score(y_test_yetiskin, y_pred_yetiskin)
+
+# Sonuçları yazdırma
+print("Lasso Regression Model Performance for Yetişkin Fonlar:")
+print("Mean Squared Error (MSE):", mse_yetiskin)
+print("Root Mean Squared Error (RMSE):", rmse_yetiskin)
+print("Mean Absolute Error (MAE):", mae_yetiskin)
+print("R-squared (R²):", r2_yetiskin)
+
+# Ağırlıkları görselleştirme
+feature_weights_yetiskin = pd.DataFrame({
+    'Feature': feature_columns_yetiskin,
+    'Weight': best_lasso_yetiskin.coef_
+}).sort_values(by='Weight', ascending=False)
+
+plt.figure(figsize=(12, 8))
+plt.barh(feature_weights_yetiskin['Feature'], feature_weights_yetiskin['Weight'], color='skyblue')
+plt.xlabel('Weight')
+plt.title('Feature Weights from Optimized Lasso Regression Model for Yetişkin Fonlar')
+plt.gca().invert_yaxis()
+plt.tight_layout()
+plt.show()
+
+##########################################################
+#########################################################
+
+#5	Model Kurma Ve Parametre Optimizasyonu Son
+
+# Metrikleri hesaplayan bir fonksiyon
+def evaluate_model(model, X_test, y_test):
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    return {"MSE": mse, "RMSE": rmse, "MAE": mae, "R²": r2}
+
+
+# Ağırlıkları görselleştirmek için bir fonksiyon
+def plot_feature_weights(model, feature_columns, title):
+    weights = model.named_steps['model'].coef_
+    feature_weights = pd.DataFrame({"Feature": feature_columns, "Weight": weights})
+    feature_weights = feature_weights.sort_values(by="Weight", ascending=False)
+
+    plt.figure(figsize=(12, 8))
+    plt.barh(feature_weights["Feature"], feature_weights["Weight"], color='skyblue')
+    plt.xlabel("Weight")
+    plt.title(f"{title} - Feature Weights")
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+    plt.show()
+
+
+# Her fon grubu için en iyi model ve metrikleri saklayacağımız bir sözlük
+best_models = {}
+
+# Her fon grubu için ayarlamalar
+for group_name, target_column, feature_columns in [
+    ("Bebek Fonlar", '3AY', feature_columns_bebek),
+    ("Genç Fonlar", '1YIL', feature_columns_genc),
+    ("Yetişkin Fonlar", '5YIL', feature_columns_yetiskin),
+]:
+    print(f"\n== {group_name} İçin Sonuçlar ==")
+
+    # Veri Hazırlığı
+    fonlar_data = df1[df1['Fon_Yasi_Featured'] == group_name][[target_column] + feature_columns].dropna()
+    X = fonlar_data[feature_columns]
+    y = fonlar_data[target_column]
+
+    # Eğitim ve test veri setlerine ayırma
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Modeli tanımla ve eğit
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+    # Modeller ve parametreler
+    models = {
+        'Lasso': Lasso(random_state=42, max_iter=10000),
+        'Ridge': Ridge(random_state=42, max_iter=10000),
+        'ElasticNet': ElasticNet(random_state=42, max_iter=10000)
+    }
+    param_grids = {
+        'Lasso': {'model__alpha': np.logspace(-4, 2, 100)},
+        'Ridge': {'model__alpha': np.logspace(-4, 2, 100)},
+        'ElasticNet': {'model__alpha': np.logspace(-4, 2, 100), 'model__l1_ratio': [0.1, 0.5, 0.7, 0.9]}
+    }
 
-    # Tahmin yapma
-    y_pred = model.predict(X_test)
+    # Her model için GridSearchCV ile en iyi parametreleri bul ve modeli değerlendir
+    group_results = {}  # Her grup için sonuçları saklayacağımız sözlük
+    for model_name, model in models.items():
+        pipe = Pipeline([
+            ('scaler', StandardScaler()),
+            ('model', model)
+        ])
 
-    # Modelin performansını değerlendirme
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+        grid_search = GridSearchCV(pipe, param_grids[model_name], cv=5, scoring='neg_mean_squared_error')
+        grid_search.fit(X_train, y_train)
+        best_model = grid_search.best_estimator_
 
-    return model, mse, r2
+        # Modeli değerlendir
+        metrics = evaluate_model(best_model, X_test, y_test)
+        print(f"{model_name} - Best Params: {grid_search.best_params_} - Metrics: {metrics}")
 
+        # Ağırlıkları çubuk grafik ile görselleştirme
+        plot_feature_weights(best_model, feature_columns, f"{group_name} - {model_name}")
 
-# Bebek fonlar için modelleme (bağımlı değişken: 3AY)
-bebek_fonlar_df = df[df['Fon_Yasi_Featured'] == 'bebek_fonlar']
-bebek_model, bebek_mse, bebek_r2 = train_model(bebek_fonlar_df, '3AY')
+        # Grup sonuçlarına ekle
+        group_results[model_name] = metrics
 
-# Genç fonlar için modelleme (bağımlı değişken: 1YIL)
-genc_fonlar_df = df[df['Fon_Yasi_Featured'] == 'genc_fonlar']
-genc_model, genc_mse, genc_r2 = train_model(genc_fonlar_df, '1YIL')
+    # Her fon grubu için en iyi modeli seç ve sözlüğe ekle
+    best_model_for_group = min(group_results.items(), key=lambda x: x[1]['MSE'])
+    best_models[group_name] = {
+        "Model": best_model_for_group[0],
+        "Metrics": best_model_for_group[1]
+    }
 
-# Yetişkin fonlar için modelleme (bağımlı değişken: 5YIL)
-yetiskin_fonlar_df = df[df['Fon_Yasi_Featured'] == 'yetiskin_fonlar']
-yetiskin_model, yetiskin_mse, yetiskin_r2 = train_model(yetiskin_fonlar_df, '5YIL')
-
-# Sonuçları yazdır
-if bebek_model:
-    print("Bebek Fonlar - MSE:", bebek_mse, "R²:", bebek_r2)
-if genc_model:
-    print("Genç Fonlar - MSE:", genc_mse, "R²:", genc_r2)
-if yetiskin_model:
-    print("Yetişkin Fonlar - MSE:", yetiskin_mse, "R²:", yetiskin_r2)
-
+# Tüm fon grupları için en iyi modelleri ve başarı metriklerini görüntüleme
+print("\nHer Fon Grubu İçin En İyi Modeller:")
+for group, info in best_models.items():
+    print(f"Fon Grubu: {group}, Model: {info['Model']}, Metrikler: {info['Metrics']}")
