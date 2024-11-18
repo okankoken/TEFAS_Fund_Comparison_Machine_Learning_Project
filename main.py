@@ -109,11 +109,6 @@ df = df.dropna(subset=['FİYAT', 'YATIRIMCI SAYISI', 'RİSK DEĞERİ'])
 # Yatirim_Paylari_Columns'da yer alan Portföy araçları  her bir fon için hepsini içeremeyeceği için bazı satırlar Null değerdedir.
 # Fakat burdaki Null değerler 0 ile doldurulacaktır.
 
-# Yatirim_Paylari_Columns Boş olan değerleri 0 ile doldurma
-df[Yatirim_Paylari_Columns] = df[Yatirim_Paylari_Columns].fillna(0)
-
-# "Fon_Bilgileri" adında yeni bir alt veri çerçevesi oluştur
-
 Fon_Bilgileri_Columns = [
     'FON KODU', 'FON ADI', 'KATEGORİ', 'ALT KATEGORİ', 'FİYAT',
        'RİSK DEĞERİ', 'GÜNLÜK', 'HAFTALIK', '1AY', '3AY', '6AY', '1YIL',
@@ -149,6 +144,11 @@ Yatirim_Paylari_Columns = [
 len(Yatirim_Paylari_Columns)
 
 
+# Yatirim_Paylari_Columns Boş olan değerleri 0 ile doldurma
+df[Yatirim_Paylari_Columns] = df[Yatirim_Paylari_Columns].fillna(0)
+
+# "Fon_Bilgileri" adında yeni bir alt veri çerçevesi oluştur
+
 df[Fon_Bilgileri_Columns].isnull().sum()
 df[Yatirim_Paylari_Columns].isnull().sum()
 
@@ -168,7 +168,7 @@ print(grouped_df)
 
 grouped_df['Summer'].sum()
 
-# Yatırım paylarında 0'dan farklı olan fon yüzdelilkli saılarını hesaplama
+# Yatırım paylarında 0'dan farklı olan fon yüzdelikli sayılarını hesaplama
 df['Yatirim_Paylari_Dolu_Sayisi'] = (df[Yatirim_Paylari_Columns] != 0).sum(axis=1)
 
 # Display the first few rows to verify the new column
@@ -333,16 +333,15 @@ df1.to_excel("Fon_Veri_Rev1.xlsx", index=False)
 # Bu nedenle, bir fonun kısa ve uzun vadeli performansını tahmin etmek, yatırım kararlarını destekleyebilir.
 # Çözüm Yaklaşımı:
 # Geçmiş performans, risk değeri, yatırımcı yoğunluğu ve portföy dağılımı gibi gibi özellikler kullanılarak gelecekteki fiyat hareketlerinin veya getirilerin tahmini yapılabilir.
-# Bir zaman serisi tahmin modeli veya regresyon modelini kullanarak belirli bir fonun 1 aylık veya 1 yıllık getirisini tahmin edilerek yatırım yapılabilir.
+# Bir zaman serisi tahmin modeli veya regresyon modeli kullanarak belirli bir fonun zaman serisi tahmin edilerek yatırım yapılabilir.
 
 
 ##########################################################
 #########################################################
-#5	Model Kurma Ve Parametre Optimizasyonu
 
-#Lasso Regresyon
-#Bebek Fonlar için Yeni
+#5	Model Kurma Ve Parametre Optimizasyonu Son
 
+# #Bebek Fonlar için Yeni
 target_column_bebek = '3AY'
 feature_columns_bebek = [
     'FİYAT', 'RİSK DEĞERİ', 'FONUN YAŞI', 'PORTFÖY BÜYÜKLÜĞÜ', 'YATIRIMCI SAYISI', 'TEDAVÜLDEKİ PAY ADETİ',
@@ -363,75 +362,7 @@ feature_columns_bebek = [
     'YATIRIM FONLARI KATILMA PAYI', 'Yatirim_Paylari_Dolu_Sayisi'
 ]
 
-# "Bebek Fonlar" için veri setini filtreleyip gerekli sütunları seçme
-bebek_fonlar_data = df1[df1['Fon_Yasi_Featured'] == 'Bebek Fonlar'][[target_column_bebek] + feature_columns_bebek]
-bebek_fonlar_data = bebek_fonlar_data.dropna()  # Eksik değerleri çıkarma
-
-# X ve y olarak bağımlı ve bağımsız değişkenleri ayırma
-X_bebek = bebek_fonlar_data[feature_columns_bebek]
-y_bebek = bebek_fonlar_data[target_column_bebek]
-
-# Eğitim ve test veri setlerine ayırma
-X_train_bebek, X_test_bebek, y_train_bebek, y_test_bebek = train_test_split(X_bebek, y_bebek, test_size=0.2, random_state=42)
-
-# Özellik ölçeklendirme
-scaler = StandardScaler()
-X_train_bebek = scaler.fit_transform(X_train_bebek)
-X_test_bebek = scaler.transform(X_test_bebek)
-
-# Lasso model için en iyi alpha değerini belirlemek için GridSearchCV kullanma
-lasso = Lasso(random_state=42)
-param_grid = {'alpha': np.logspace(-4, 0, 50)}
-grid_search = GridSearchCV(lasso, param_grid, scoring='neg_mean_squared_error', cv=5)
-grid_search.fit(X_train_bebek, y_train_bebek)
-
-# En iyi model ve en iyi alpha değeri
-best_lasso = grid_search.best_estimator_
-print("Best alpha:", grid_search.best_params_['alpha'])
-
-# Test seti ile tahmin yapma
-y_pred_bebek = best_lasso.predict(X_test_bebek)
-
-# Başarı metriklerini hesaplama
-mse_bebek = mean_squared_error(y_test_bebek, y_pred_bebek)
-rmse_bebek = np.sqrt(mse_bebek)
-mae_bebek = mean_absolute_error(y_test_bebek, y_pred_bebek)
-r2_bebek = r2_score(y_test_bebek, y_pred_bebek)
-
-# Sonuçları yazdırma
-print("Lasso Regression Model Performance for Bebek Fonlar:")
-print("Mean Squared Error (MSE):", mse_bebek)
-print("Root Mean Squared Error (RMSE):", rmse_bebek)
-print("Mean Absolute Error (MAE):", mae_bebek)
-print("R-squared (R²):", r2_bebek)
-
-# Özellik ağırlıklarını gösterme
-feature_weights_bebek = pd.DataFrame({
-    'Feature': feature_columns_bebek,
-    'Weight': best_lasso.coef_
-}).sort_values(by='Weight', ascending=False)
-
-print("\nFeature Weights:")
-print(feature_weights_bebek)
-
-# Örnek ağırlık verilerini içeriyorsa bunu tanımlayın. (Önceden tanımlanmışsa gerek yok)
-feature_weights_bebek = pd.DataFrame({
-    'Feature': feature_columns_bebek,
-    'Weight': best_lasso.coef_
-}).sort_values(by='Weight', ascending=False)
-
-# Ağırlıkları çubuk grafik olarak gösterme
-plt.figure(figsize=(12, 8))
-plt.barh(feature_weights_bebek['Feature'], feature_weights_bebek['Weight'], color='skyblue')
-plt.xlabel('Weight')
-plt.title('Feature Weights from Optimized Lasso Regression Model for Bebek Fonlar')
-plt.gca().invert_yaxis()  # En yüksek ağırlıkların en üstte görünmesi için y eksenini ters çevirme
-plt.tight_layout()
-plt.show()
-
-
-####################
-# Genç Fonlar İçin Yeni
+#Genç Fonlar İçin Yeni
 target_column_genc = '1YIL'
 feature_columns_genc = [
     'FİYAT', 'RİSK DEĞERİ', 'FONUN YAŞI', 'PORTFÖY BÜYÜKLÜĞÜ', 'YATIRIMCI SAYISI', 'TEDAVÜLDEKİ PAY ADETİ',
@@ -452,61 +383,7 @@ feature_columns_genc = [
     'YATIRIM FONLARI KATILMA PAYI', 'Yatirim_Paylari_Dolu_Sayisi'
 ]
 
-# Genç Fonlar için veri hazırlığı
-genc_fonlar_data = df1[df1['Fon_Yasi_Featured'] == 'Genç Fonlar'][[target_column_genc] + feature_columns_genc].dropna()
-X_genc = genc_fonlar_data[feature_columns_genc]
-y_genc = genc_fonlar_data[target_column_genc]
-
-# Eğitim ve test setlerine ayırma
-X_train_genc, X_test_genc, y_train_genc, y_test_genc = train_test_split(X_genc, y_genc, test_size=0.2, random_state=42)
-
-# Özellikleri ölçeklendirme
-scaler_genc = StandardScaler()
-X_train_genc = scaler_genc.fit_transform(X_train_genc)
-X_test_genc = scaler_genc.transform(X_test_genc)
-
-# En iyi alpha değeri için GridSearchCV ile Lasso modelini optimize etme
-lasso = Lasso(random_state=42)
-param_grid = {'alpha': np.logspace(-4, 0, 50)}
-grid_search_genc = GridSearchCV(lasso, param_grid, scoring='neg_mean_squared_error', cv=5)
-grid_search_genc.fit(X_train_genc, y_train_genc)
-
-# En iyi model ve alpha değeri
-best_lasso_genc = grid_search_genc.best_estimator_
-
-# Test seti ile tahmin yapma
-y_pred_genc = best_lasso_genc.predict(X_test_genc)
-
-# Başarı metriklerini hesaplama
-mse_genc = mean_squared_error(y_test_genc, y_pred_genc)
-rmse_genc = np.sqrt(mse_genc)
-mae_genc = mean_absolute_error(y_test_genc, y_pred_genc)
-r2_genc = r2_score(y_test_genc, y_pred_genc)
-
-# Sonuçları yazdırma
-print("Lasso Regression Model Performance for Genç Fonlar:")
-print("Mean Squared Error (MSE):", mse_genc)
-print("Root Mean Squared Error (RMSE):", rmse_genc)
-print("Mean Absolute Error (MAE):", mae_genc)
-print("R-squared (R²):", r2_genc)
-
-# Ağırlıkları görselleştirme
-feature_weights_genc = pd.DataFrame({
-    'Feature': feature_columns_genc,
-    'Weight': best_lasso_genc.coef_
-}).sort_values(by='Weight', ascending=False)
-
-plt.figure(figsize=(12, 8))
-plt.barh(feature_weights_genc['Feature'], feature_weights_genc['Weight'], color='skyblue')
-plt.xlabel('Weight')
-plt.title('Feature Weights from Optimized Lasso Regression Model for Genç Fonlar')
-plt.gca().invert_yaxis()
-plt.tight_layout()
-plt.show()
-
-
 #Yetiskin Fonlar için Yeni
-
 target_column_yetiskin = '5YIL'
 feature_columns_yetiskin = [
     'FİYAT', 'RİSK DEĞERİ', 'FONUN YAŞI', 'PORTFÖY BÜYÜKLÜĞÜ', 'YATIRIMCI SAYISI', 'TEDAVÜLDEKİ PAY ADETİ',
@@ -527,62 +404,6 @@ feature_columns_yetiskin = [
     'YATIRIM FONLARI KATILMA PAYI', 'Yatirim_Paylari_Dolu_Sayisi'
 ]
 
-# Yetişkin Fonlar için veri hazırlığı
-yetiskin_fonlar_data = df1[df1['Fon_Yasi_Featured'] == 'Yetişkin Fonlar'][[target_column_yetiskin] + feature_columns_yetiskin].dropna()
-X_yetiskin = yetiskin_fonlar_data[feature_columns_yetiskin]
-y_yetiskin = yetiskin_fonlar_data[target_column_yetiskin]
-
-# Eğitim ve test setlerine ayırma
-X_train_yetiskin, X_test_yetiskin, y_train_yetiskin, y_test_yetiskin = train_test_split(X_yetiskin, y_yetiskin, test_size=0.2, random_state=42)
-
-# Özellikleri ölçeklendirme
-scaler_yetiskin = StandardScaler()
-X_train_yetiskin = scaler_yetiskin.fit_transform(X_train_yetiskin)
-X_test_yetiskin = scaler_yetiskin.transform(X_test_yetiskin)
-
-# En iyi alpha değeri için GridSearchCV ile Lasso modelini optimize etme
-lasso = Lasso(random_state=42)
-param_grid = {'alpha': np.logspace(-4, 0, 50)}
-grid_search_yetiskin = GridSearchCV(lasso, param_grid, scoring='neg_mean_squared_error', cv=5)
-grid_search_yetiskin.fit(X_train_yetiskin, y_train_yetiskin)
-
-# En iyi model ve alpha değeri
-best_lasso_yetiskin = grid_search_yetiskin.best_estimator_
-
-# Test seti ile tahmin yapma
-y_pred_yetiskin = best_lasso_yetiskin.predict(X_test_yetiskin)
-
-# Başarı metriklerini hesaplama
-mse_yetiskin = mean_squared_error(y_test_yetiskin, y_pred_yetiskin)
-rmse_yetiskin = np.sqrt(mse_yetiskin)
-mae_yetiskin = mean_absolute_error(y_test_yetiskin, y_pred_yetiskin)
-r2_yetiskin = r2_score(y_test_yetiskin, y_pred_yetiskin)
-
-# Sonuçları yazdırma
-print("Lasso Regression Model Performance for Yetişkin Fonlar:")
-print("Mean Squared Error (MSE):", mse_yetiskin)
-print("Root Mean Squared Error (RMSE):", rmse_yetiskin)
-print("Mean Absolute Error (MAE):", mae_yetiskin)
-print("R-squared (R²):", r2_yetiskin)
-
-# Ağırlıkları görselleştirme
-feature_weights_yetiskin = pd.DataFrame({
-    'Feature': feature_columns_yetiskin,
-    'Weight': best_lasso_yetiskin.coef_
-}).sort_values(by='Weight', ascending=False)
-
-plt.figure(figsize=(12, 8))
-plt.barh(feature_weights_yetiskin['Feature'], feature_weights_yetiskin['Weight'], color='skyblue')
-plt.xlabel('Weight')
-plt.title('Feature Weights from Optimized Lasso Regression Model for Yetişkin Fonlar')
-plt.gca().invert_yaxis()
-plt.tight_layout()
-plt.show()
-
-##########################################################
-#########################################################
-
-#5	Model Kurma Ve Parametre Optimizasyonu Son
 
 # Metrikleri hesaplayan bir fonksiyon
 def evaluate_model(model, X_test, y_test):
