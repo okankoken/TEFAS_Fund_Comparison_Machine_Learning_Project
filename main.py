@@ -333,7 +333,8 @@ df1.to_excel("Fon_Veri_Rev1.xlsx", index=False)
 # Bu nedenle, bir fonun kısa ve uzun vadeli performansını tahmin etmek, yatırım kararlarını destekleyebilir.
 # Çözüm Yaklaşımı:
 # Geçmiş performans, risk değeri, yatırımcı yoğunluğu ve portföy dağılımı gibi gibi özellikler kullanılarak gelecekteki fiyat hareketlerinin veya getirilerin tahmini yapılabilir.
-# Bir zaman serisi tahmin modeli veya regresyon modeli kullanarak belirli bir fonun zaman serisi tahmin edilerek yatırım yapılabilir.
+# Çeşitli yatırım araçları baz alınarak Belirli zaman dilimlerindeki Yüzdelik değişimler makine öğrenmesi modeller oluşturularak belirli bir fonun hangi değişimini
+# hangi paratmetreler olumlu ve olumsuz etkiliyor analizi yapılabilir.
 
 
 ##########################################################
